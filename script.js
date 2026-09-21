@@ -22,16 +22,17 @@ const HIGHSCORE_KEY = "blackjack_highscore";
 const THEME_KEY = "blackjack_theme";
 
 // Pip positions (x%, y%, flip) for number cards, based on standard playing-card layouts.
+// Kept inset from the edges so pips never overlap the corner rank/suit indices.
 const PIP_LAYOUTS = {
-  2: [[50, 18, false], [50, 82, true]],
-  3: [[50, 18, false], [50, 50, false], [50, 82, true]],
-  4: [[25, 18, false], [75, 18, false], [25, 82, true], [75, 82, true]],
-  5: [[25, 18, false], [75, 18, false], [50, 50, false], [25, 82, true], [75, 82, true]],
-  6: [[25, 18, false], [75, 18, false], [25, 50, false], [75, 50, false], [25, 82, true], [75, 82, true]],
-  7: [[25, 14, false], [75, 14, false], [50, 30, false], [25, 50, false], [75, 50, false], [25, 86, true], [75, 86, true]],
-  8: [[25, 12, false], [75, 12, false], [50, 27, false], [25, 45, false], [75, 45, false], [50, 63, true], [25, 88, true], [75, 88, true]],
-  9: [[25, 11, false], [75, 11, false], [25, 34, false], [75, 34, false], [50, 50, false], [25, 66, true], [75, 66, true], [25, 89, true], [75, 89, true]],
-  10: [[25, 9, false], [75, 9, false], [50, 21, false], [25, 38, false], [75, 38, false], [25, 62, true], [75, 62, true], [50, 79, true], [25, 91, true], [75, 91, true]],
+  2: [[50, 24, false], [50, 76, true]],
+  3: [[50, 24, false], [50, 50, false], [50, 76, true]],
+  4: [[30, 24, false], [70, 24, false], [30, 76, true], [70, 76, true]],
+  5: [[30, 24, false], [70, 24, false], [50, 50, false], [30, 76, true], [70, 76, true]],
+  6: [[30, 22, false], [70, 22, false], [30, 50, false], [70, 50, false], [30, 78, true], [70, 78, true]],
+  7: [[30, 20, false], [70, 20, false], [50, 35, false], [30, 50, false], [70, 50, false], [30, 80, true], [70, 80, true]],
+  8: [[30, 18, false], [70, 18, false], [50, 32, false], [30, 50, false], [70, 50, false], [50, 68, true], [30, 82, true], [70, 82, true]],
+  9: [[30, 17, false], [70, 17, false], [30, 38, false], [70, 38, false], [50, 50, false], [30, 62, true], [70, 62, true], [30, 83, true], [70, 83, true]],
+  10: [[30, 15, false], [70, 15, false], [50, 26, false], [30, 40, false], [70, 40, false], [30, 60, true], [70, 60, true], [50, 74, true], [30, 85, true], [70, 85, true]],
 };
 
 let deck = [];
@@ -67,6 +68,12 @@ const doubleBtn = document.getElementById("doubleBtn");
 const nextRoundBtn = document.getElementById("nextRoundBtn");
 const resetBtn = document.getElementById("resetBtn");
 const chipRow = document.getElementById("chipRow");
+
+const brokeModal = document.getElementById("brokeModal");
+const modalResetBtn = document.getElementById("modalResetBtn");
+const modalDismissBtn = document.getElementById("modalDismissBtn");
+const brokeNote = document.getElementById("brokeNote");
+const brokeResetLink = document.getElementById("brokeResetLink");
 
 // ---------- Persistence ----------
 
@@ -262,6 +269,15 @@ function showBetControls() {
   betControls.hidden = false;
   actionControls.hidden = true;
   nextControls.hidden = true;
+
+  const broke = money <= 0;
+  dealBtn.disabled = broke;
+  brokeNote.hidden = !broke;
+  if (broke) {
+    brokeModal.hidden = false;
+  } else {
+    brokeModal.hidden = true;
+  }
 }
 
 function showActionControls() {
@@ -436,14 +452,12 @@ function resolveRound() {
 
 function nextRound() {
   clearTable();
-  if (money <= 0) {
-    setMessage("You're out of money. Reset your bankroll to keep playing.");
-    showBetControls();
-    dealBtn.disabled = true;
-    return;
-  }
   betInput.max = String(money);
-  setMessage("Place a bet to begin the next hand.");
+  setMessage(
+    money <= 0
+      ? "You're out of money. Reset your bankroll to keep playing."
+      : "Place a bet to begin the next hand."
+  );
   showBetControls();
 }
 
@@ -451,7 +465,6 @@ function resetBankroll() {
   money = STARTING_MONEY;
   saveMoney();
   renderMoney();
-  dealBtn.disabled = false;
   clearTable();
   setMessage("Bankroll reset. Place a bet to begin.");
   showBetControls();
@@ -482,6 +495,17 @@ betInput.addEventListener("change", () => {
 themeToggle.addEventListener("click", () => {
   applyTheme(document.body.dataset.theme === "dark" ? "felt" : "dark");
 });
+
+modalResetBtn.addEventListener("click", () => {
+  brokeModal.hidden = true;
+  resetBankroll();
+});
+
+modalDismissBtn.addEventListener("click", () => {
+  brokeModal.hidden = true;
+});
+
+brokeResetLink.addEventListener("click", resetBankroll);
 
 // ---------- Init ----------
 

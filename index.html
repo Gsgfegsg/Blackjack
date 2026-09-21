@@ -80,6 +80,11 @@
           <button type="button" class="chip chip-max" data-value="max">Max</button>
         </div>
         <button class="btn btn-gold" id="dealBtn">Deal</button>
+        <p class="broke-note" id="brokeNote" hidden>
+          Out of money —
+          <button type="button" class="link-btn" id="brokeResetLink">reset your bankroll</button>
+          to keep playing.
+        </p>
       </div>
 
       <div class="action-controls" id="actionControls" hidden>
@@ -95,6 +100,17 @@
 
     </footer>
 
+  </div>
+
+  <div class="modal-overlay" id="brokeModal" hidden>
+    <div class="modal-box">
+      <h2>Out of money</h2>
+      <p>You've bet through your entire bankroll. Reset it to keep playing?</p>
+      <div class="modal-actions">
+        <button class="btn btn-gold" id="modalResetBtn">Reset Bankroll</button>
+        <button class="btn btn-outline" id="modalDismissBtn">Not now</button>
+      </div>
+    </div>
   </div>
 
   <script src="script.js"></script>
