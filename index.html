@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blackjack</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="table">
+
+    <header class="tableheader">
+      <div class="brand">
+        <span class="brand-mark">♠</span>
+        <div class="brand-text">
+          <h1>Blackjack</h1>
+          <p>Dealer stands on 17 &middot; Blackjack pays 3:2</p>
+        </div>
+      </div>
+      <div class="bankroll">
+        <span class="bankroll-label">Bankroll</span>
+        <span class="bankroll-amount" id="moneyDisplay">£5,000</span>
+      </div>
+    </header>
+
+    <section class="felt">
+
+      <div class="hand-area dealer-area">
+        <div class="hand-label">
+          <span>Dealer</span>
+          <span class="hand-total" id="dealerTotal"></span>
+        </div>
+        <div class="cards" id="dealerCards"></div>
+      </div>
+
+      <div class="center-strip">
+        <p class="center-message" id="message">Place a bet to begin the shoe.</p>
+      </div>
+
+      <div class="hand-area player-area">
+        <div class="hand-label">
+          <span>You</span>
+          <span class="hand-total" id="playerTotal"></span>
+        </div>
+        <div class="cards" id="playerCards"></div>
+      </div>
+
+    </section>
+
+    <footer class="controls">
+
+      <div class="bet-controls" id="betControls">
+        <div class="bet-field">
+          <label for="betInput">Your bet</label>
+          <div class="bet-input-wrap">
+            <span>£</span>
+            <input type="number" id="betInput" min="1" step="10" value="100" inputmode="numeric">
+          </div>
+        </div>
+        <div class="chip-row" id="chipRow">
+          <button type="button" class="chip" data-value="25">£25</button>
+          <button type="button" class="chip" data-value="100">£100</button>
+          <button type="button" class="chip" data-value="500">£500</button>
+          <button type="button" class="chip chip-max" data-value="max">Max</button>
+        </div>
+        <button class="btn btn-gold" id="dealBtn">Deal</button>
+      </div>
+
+      <div class="action-controls" id="actionControls" hidden>
+        <button class="btn" id="hitBtn">Hit</button>
+        <button class="btn" id="standBtn">Stand</button>
+        <button class="btn btn-outline" id="doubleBtn">Double Down</button>
+      </div>
+
+      <div class="next-controls" id="nextControls" hidden>
+        <button class="btn btn-gold" id="nextRoundBtn">Deal Again</button>
+        <button class="btn btn-outline" id="resetBtn">Reset Bankroll</button>
+      </div>
+
+    </footer>
+
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
