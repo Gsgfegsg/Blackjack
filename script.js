@@ -18,6 +18,8 @@ const RANK_VALUES = {
 
 const STARTING_MONEY = 2000;
 const STORAGE_KEY = "blackjack_bankroll";
+const HIGHSCORE_KEY = "blackjack_highscore";
+const THEME_KEY = "blackjack_theme";
 
 // Pip positions (x%, y%, flip) for number cards, based on standard playing-card layouts.
 const PIP_LAYOUTS = {
@@ -36,6 +38,7 @@ let deck = [];
 let playerHand = [];
 let dealerHand = [];
 let money = loadMoney();
+let highscore = loadHighscore();
 let bet = 0;
 let firstPlay = true;
 let roundOver = true;
@@ -44,6 +47,8 @@ let dealerHoleHidden = false;
 // ---------- DOM references ----------
 
 const moneyDisplay = document.getElementById("moneyDisplay");
+const highscoreDisplay = document.getElementById("highscoreDisplay");
+const themeToggle = document.getElementById("themeToggle");
 const messageEl = document.getElementById("message");
 const dealerCardsEl = document.getElementById("dealerCards");
 const playerCardsEl = document.getElementById("playerCards");
@@ -73,6 +78,41 @@ function loadMoney() {
 
 function saveMoney() {
   localStorage.setItem(STORAGE_KEY, String(money));
+  checkHighscore();
+}
+
+function loadHighscore() {
+  const saved = localStorage.getItem(HIGHSCORE_KEY);
+  const parsed = saved === null ? NaN : parseInt(saved, 10);
+  return Number.isFinite(parsed) ? parsed : STARTING_MONEY;
+}
+
+function saveHighscore() {
+  localStorage.setItem(HIGHSCORE_KEY, String(highscore));
+}
+
+function checkHighscore() {
+  if (money > highscore) {
+    highscore = money;
+    saveHighscore();
+    renderHighscore(true);
+  }
+}
+
+// ---------- Theme ----------
+
+function loadTheme() {
+  return localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "felt";
+}
+
+function applyTheme(theme) {
+  document.body.dataset.theme = theme;
+  localStorage.setItem(THEME_KEY, theme);
+  themeToggle.textContent = theme === "dark" ? "🌲" : "🌑";
+  themeToggle.setAttribute(
+    "aria-label",
+    theme === "dark" ? "Switch to green felt table" : "Switch to dark table"
+  );
 }
 
 // ---------- Deck helpers ----------
@@ -134,6 +174,16 @@ function renderMoney(flash) {
   }
 }
 
+function renderHighscore(flash) {
+  highscoreDisplay.textContent = formatMoney(highscore);
+  highscoreDisplay.classList.remove("flash-win");
+  if (flash) {
+    // restart the animation even if it's already mid-flash
+    void highscoreDisplay.offsetWidth;
+    highscoreDisplay.classList.add("flash-win");
+  }
+}
+
 function cardEl(card, hidden) {
   const el = document.createElement("div");
   if (hidden) {
@@ -141,13 +191,9 @@ function cardEl(card, hidden) {
     return el;
   }
   el.className = `card ${card.color}`;
-  const topRank = document.createElement("div");
-  topRank.className = "card-rank";
-  topRank.textContent = shortRank(card.rank);
 
-  const bottomRank = document.createElement("div");
-  bottomRank.className = "card-rank bottom";
-  bottomRank.textContent = shortRank(card.rank);
+  const topCorner = cornerIndex(card, false);
+  const bottomCorner = cornerIndex(card, true);
 
   const pipLayout = PIP_LAYOUTS[Number(card.rank)];
   if (pipLayout) {
@@ -164,14 +210,27 @@ function cardEl(card, hidden) {
         : "translate(-50%, -50%)";
       pipField.appendChild(pip);
     });
-    el.append(topRank, pipField, bottomRank);
+    el.append(topCorner, pipField, bottomCorner);
   } else {
     const suitCenter = document.createElement("div");
     suitCenter.className = "card-suit-center";
     suitCenter.textContent = card.symbol;
-    el.append(topRank, suitCenter, bottomRank);
+    el.append(topCorner, suitCenter, bottomCorner);
   }
   return el;
+}
+
+function cornerIndex(card, flipped) {
+  const wrap = document.createElement("div");
+  wrap.className = flipped ? "corner corner-bottom" : "corner corner-top";
+  const rank = document.createElement("span");
+  rank.className = "corner-rank";
+  rank.textContent = shortRank(card.rank);
+  const suit = document.createElement("span");
+  suit.className = "corner-suit";
+  suit.textContent = card.symbol;
+  wrap.append(rank, suit);
+  return wrap;
 }
 
 function shortRank(rank) {
@@ -275,7 +334,6 @@ function finishBlackjack() {
   saveMoney();
   setMessage(`Blackjack! You win £${winnings.toLocaleString("en-GB")}.`, true);
   renderMoney("win");
-  clearTable();
   showNextControls();
 }
 
@@ -291,7 +349,6 @@ function playerHit() {
     saveMoney();
     renderMoney("lose");
     setMessage(`Bust at ${total}. You lose £${bet.toLocaleString("en-GB")}.`, true);
-    clearTable();
     showNextControls();
     roundOver = true;
   } else {
@@ -321,7 +378,6 @@ function playerDoubleDown() {
     saveMoney();
     renderMoney("lose");
     setMessage(`Bust at ${total} on a doubled £${bet.toLocaleString("en-GB")} bet.`, true);
-    clearTable();
     showNextControls();
     roundOver = true;
     return;
@@ -375,11 +431,11 @@ function resolveRound() {
     setMessage(`Push at ${playerTotal}. Your bet is returned.`, true);
   }
 
-  clearTable();
   showNextControls();
 }
 
 function nextRound() {
+  clearTable();
   if (money <= 0) {
     setMessage("You're out of money. Reset your bankroll to keep playing.");
     showBetControls();
@@ -387,9 +443,6 @@ function nextRound() {
     return;
   }
   betInput.max = String(money);
-  if (parseInt(betInput.value, 10) > money) {
-    betInput.value = String(money);
-  }
   setMessage("Place a bet to begin the next hand.");
   showBetControls();
 }
@@ -399,9 +452,7 @@ function resetBankroll() {
   saveMoney();
   renderMoney();
   dealBtn.disabled = false;
-  playerHand = [];
-  dealerHand = [];
-  renderHands({});
+  clearTable();
   setMessage("Bankroll reset. Place a bet to begin.");
   showBetControls();
 }
@@ -428,11 +479,17 @@ betInput.addEventListener("change", () => {
   if (v > money) betInput.value = String(money);
 });
 
+themeToggle.addEventListener("click", () => {
+  applyTheme(document.body.dataset.theme === "dark" ? "felt" : "dark");
+});
+
 // ---------- Init ----------
 
 deck = buildDeck();
 shuffle(deck);
+applyTheme(loadTheme());
 renderMoney();
+renderHighscore();
 renderHands({});
 betInput.max = String(money);
 showBetControls();
