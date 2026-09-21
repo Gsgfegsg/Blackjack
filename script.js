@@ -16,8 +16,21 @@ const RANK_VALUES = {
   Jack: 10, Queen: 10, King: 10, Ace: 11,
 };
 
-const STARTING_MONEY = 5000;
+const STARTING_MONEY = 2000;
 const STORAGE_KEY = "blackjack_bankroll";
+
+// Pip positions (x%, y%, flip) for number cards, based on standard playing-card layouts.
+const PIP_LAYOUTS = {
+  2: [[50, 18, false], [50, 82, true]],
+  3: [[50, 18, false], [50, 50, false], [50, 82, true]],
+  4: [[25, 18, false], [75, 18, false], [25, 82, true], [75, 82, true]],
+  5: [[25, 18, false], [75, 18, false], [50, 50, false], [25, 82, true], [75, 82, true]],
+  6: [[25, 18, false], [75, 18, false], [25, 50, false], [75, 50, false], [25, 82, true], [75, 82, true]],
+  7: [[25, 14, false], [75, 14, false], [50, 30, false], [25, 50, false], [75, 50, false], [25, 86, true], [75, 86, true]],
+  8: [[25, 12, false], [75, 12, false], [50, 27, false], [25, 45, false], [75, 45, false], [50, 63, true], [25, 88, true], [75, 88, true]],
+  9: [[25, 11, false], [75, 11, false], [25, 34, false], [75, 34, false], [50, 50, false], [25, 66, true], [75, 66, true], [25, 89, true], [75, 89, true]],
+  10: [[25, 9, false], [75, 9, false], [50, 21, false], [25, 38, false], [75, 38, false], [25, 62, true], [75, 62, true], [50, 79, true], [25, 91, true], [75, 91, true]],
+};
 
 let deck = [];
 let playerHand = [];
@@ -130,18 +143,34 @@ function cardEl(card, hidden) {
   el.className = `card ${card.color}`;
   const topRank = document.createElement("div");
   topRank.className = "card-rank";
-  topRank.textContent = card.rank === "10" ? "10" : card.rank[0] === "1" ? card.rank : card.rank[0];
   topRank.textContent = shortRank(card.rank);
-
-  const suitCenter = document.createElement("div");
-  suitCenter.className = "card-suit-center";
-  suitCenter.textContent = card.symbol;
 
   const bottomRank = document.createElement("div");
   bottomRank.className = "card-rank bottom";
   bottomRank.textContent = shortRank(card.rank);
 
-  el.append(topRank, suitCenter, bottomRank);
+  const pipLayout = PIP_LAYOUTS[Number(card.rank)];
+  if (pipLayout) {
+    const pipField = document.createElement("div");
+    pipField.className = "card-pips";
+    pipLayout.forEach(([x, y, flip]) => {
+      const pip = document.createElement("span");
+      pip.className = "pip";
+      pip.textContent = card.symbol;
+      pip.style.left = `${x}%`;
+      pip.style.top = `${y}%`;
+      pip.style.transform = flip
+        ? "translate(-50%, -50%) rotate(180deg)"
+        : "translate(-50%, -50%)";
+      pipField.appendChild(pip);
+    });
+    el.append(topRank, pipField, bottomRank);
+  } else {
+    const suitCenter = document.createElement("div");
+    suitCenter.className = "card-suit-center";
+    suitCenter.textContent = card.symbol;
+    el.append(topRank, suitCenter, bottomRank);
+  }
   return el;
 }
 
@@ -180,12 +209,24 @@ function showActionControls() {
   betControls.hidden = true;
   actionControls.hidden = false;
   nextControls.hidden = true;
+  hitBtn.disabled = false;
+  standBtn.disabled = false;
 }
 
 function showNextControls() {
   betControls.hidden = true;
   actionControls.hidden = true;
   nextControls.hidden = false;
+  hitBtn.disabled = true;
+  standBtn.disabled = true;
+  doubleBtn.disabled = true;
+}
+
+function clearTable() {
+  playerHand = [];
+  dealerHand = [];
+  renderHands({});
+  betInput.value = "";
 }
 
 // ---------- Game flow ----------
@@ -232,13 +273,14 @@ function finishBlackjack() {
   const winnings = Math.floor((bet * 3) / 2);
   money += winnings;
   saveMoney();
-  renderHands({ hideDealerHole: false });
   setMessage(`Blackjack! You win £${winnings.toLocaleString("en-GB")}.`, true);
   renderMoney("win");
+  clearTable();
   showNextControls();
 }
 
 function playerHit() {
+  if (actionControls.hidden) return;
   firstPlay = false;
   playerHand.push(drawCard());
   renderHands({ hideDealerHole: true });
@@ -249,6 +291,7 @@ function playerHit() {
     saveMoney();
     renderMoney("lose");
     setMessage(`Bust at ${total}. You lose £${bet.toLocaleString("en-GB")}.`, true);
+    clearTable();
     showNextControls();
     roundOver = true;
   } else {
@@ -258,11 +301,12 @@ function playerHit() {
 }
 
 function playerStand() {
+  if (actionControls.hidden) return;
   dealerPlay();
 }
 
 function playerDoubleDown() {
-  if (!firstPlay) return;
+  if (actionControls.hidden || !firstPlay) return;
   if (bet * 2 > money) {
     setMessage("Not enough bankroll to double down.");
     return;
@@ -277,6 +321,7 @@ function playerDoubleDown() {
     saveMoney();
     renderMoney("lose");
     setMessage(`Bust at ${total} on a doubled £${bet.toLocaleString("en-GB")} bet.`, true);
+    clearTable();
     showNextControls();
     roundOver = true;
     return;
@@ -288,6 +333,9 @@ function dealerPlay() {
   renderHands({ hideDealerHole: false });
   setMessage(`Dealer reveals ${handValue(dealerHand)}.`);
   actionControls.hidden = true;
+  hitBtn.disabled = true;
+  standBtn.disabled = true;
+  doubleBtn.disabled = true;
 
   const step = () => {
     if (handValue(dealerHand) < 17) {
@@ -327,6 +375,7 @@ function resolveRound() {
     setMessage(`Push at ${playerTotal}. Your bet is returned.`, true);
   }
 
+  clearTable();
   showNextControls();
 }
 
